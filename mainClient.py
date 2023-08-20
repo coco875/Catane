@@ -1,12 +1,21 @@
 # coding: utf-8
 
 
-from plateau import *
-from messages import *
-from stats import *
+from plateau import Plateau
+from messages import Messages
+from joueur import Joueur, Carte, Route, Ville, Colonie
+from sommet import Sommet
+from arete import Arete
+from stats import Stats
 from outils import *
+from game import Game
 
 if __name__ == "__main__":
+    game = Game()
+    while True:
+        game.main()
+
+if __name__ == "__main__" and False:
     port = 12800
     connexionServeur = ReseauClient(port)
     monPseudo = ''

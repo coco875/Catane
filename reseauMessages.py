@@ -1,7 +1,7 @@
 # coding: utf-8
 
-import requests
 import time
+import socketio
 
 LOGIN = 'login'
 CONDITIONS_INIT_JEU = 'conditionsInitJeu'
@@ -29,6 +29,8 @@ TYPE_MSG_ATTR_JOUEUR = 'attribut'
 DELAY_SERVEUR_REQUESTS = 0.1
 
 
+sio = socketio.Client()
+
 class ReseauClient:
     def __init__(self, port):
         self.pseudoJoueur = None
@@ -38,27 +40,20 @@ class ReseauClient:
         self.time_last_request = 0
 
     def envoie_au_serveur(self, cle, valeur, info=None):
-        url = f'http://{self.adresse_ip}:{self.port}/catane/{EVT_ACTION}'
         paramjson = {PARAM_PSEUDO: self.pseudoJoueur, PARAM_TYPE: cle, PARAM_CONTENU: valeur, PARAM_INFO: info}
-        reponse = requests.post(url, json=paramjson)
-        # print(reponse)
+        sio.emit(EVT_ACTION, paramjson)
 
     def sauvegarde_partie(self):
-        url = f'http://{self.adresse_ip}:{self.port}/catane/{SAUVEGARDE}'
-        reponse = requests.get(url).json()
+        sio.emit(SAUVEGARDE)
 
     def login(self, pseudo):
-        url = f'http://{self.adresse_ip}:{self.port}/catane/{LOGIN}?{PARAM_PSEUDO}={pseudo}'
         try:
-            reponse = requests.get(url).json()
-        except:
-            pass
-        else:
-            # print(reponse)
-            self.pseudoJoueur = pseudo
-            if reponse == 1:
-                return True
-        return False
+            sio.connect(f'http://{self.adresse_ip}:{self.port}')
+        except socketio.exceptions.ConnectionError:
+            return False
+        sio.emit(LOGIN, {PARAM_PSEUDO: pseudo})
+        self.pseudoJoueur = pseudo
+        return True
 
     def getConditionsInitJeu(self):
         url = f'http://{self.adresse_ip}:{self.port}/catane/{CONDITIONS_INIT_JEU}'

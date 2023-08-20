@@ -2,13 +2,18 @@
 
 from plateau import *
 from outils import *
-from flask import Flask, request, jsonify
+from const import *
+import eventlet
+import socketio
 import json
+
+sio = socketio.Server()
+app = socketio.WSGIApp(sio)
 
 MODE_SAUVEGARDE = False
 FICHIER_SAUVEGARDE = 'sauvegarde.json'
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 
 class Evenement():
@@ -48,8 +53,8 @@ if MODE_SAUVEGARDE:
             Evenement.id_max = len(listeEvenements) + 1
 
 
-@app.route(f'/catane/{SAUVEGARDE}')
-def sauvegarde():
+@sio.on(SAUVEGARDE)
+def sauvegarde(sid, data):
     dic = {'liste_clients_pseudos': liste_clients_pseudos,
            'nbJoueurs': nbJoueurs,
            'dumpConditionsInitialesJeu' : dumpConditionsInitialesJeu,
@@ -59,10 +64,11 @@ def sauvegarde():
     return str(1)
 
 
-@app.route(f'/catane/{LOGIN}')
-def login():
-    pseudo = request.args.get(PARAM_PSEUDO)
-    # print(pseudo)
+@sio.on(LOGIN)
+def login(sid, data):
+    print(sid)
+    pseudo = data[PARAM_PSEUDO]
+    print(data)
     if pseudo not in liste_clients_pseudos:
         if len(liste_clients_pseudos) >= nbJoueurs:
             return str(0)
@@ -71,24 +77,23 @@ def login():
     return str(1)
 
 
-@app.route(f'/catane/{EVT_ACTION}', methods=['POST'])
-def action():
-    req_data = request.get_json()
-    pseudo = req_data[PARAM_PSEUDO]
-    type = req_data[PARAM_TYPE]
-    contenu = req_data[PARAM_CONTENU]
-    info = req_data[PARAM_INFO]
+@sio.on(EVT_ACTION)
+def action(sid, data):
+    pseudo = data[PARAM_PSEUDO]
+    type = data[PARAM_TYPE]
+    contenu = data[PARAM_CONTENU]
+    info = data[PARAM_INFO]
     event = Evenement(pseudo, type, contenu, info)
     listeEvenements.append(event)
     # print(event.dump())
     return '1'
 
 
-@app.route(f'/catane/{EVT_GET_EVENT}')
-def event():
-    pseudo = request.args.get(PARAM_PSEUDO)
-    id_str = request.args.get(PARAM_ID)
-    # print(f'pseudo : {pseudo}, id : {id_str}')
+@sio.on(EVT_GET_EVENT)
+def event(sid, data):
+    pseudo = data[PARAM_PSEUDO]
+    id_str = data[PARAM_ID]
+    print(f'pseudo : {pseudo}, id : {id_str}')
     l = []
     if id_str is not None:
         try:
@@ -104,18 +109,18 @@ def event():
                 event = listeEvenements[i]
                 if event.pseudo != pseudo or id == -1:
                     l.append(event.dump())
-    return jsonify(l)
+    return l
 
 
-@app.route(f'/catane/{CONDITIONS_INIT_JEU}')
-def getConditionsInitJeu():
+@sio.on(CONDITIONS_INIT_JEU)
+def getConditionsInitJeu(sid, data):
     return dumpConditionsInitialesJeu
 
 
-@app.route(f'/catane/{LISTE_JOUEURS}')
-def getListeJoueurs():
+@sio.on(LISTE_JOUEURS)
+def getListeJoueurs(sid, data):
     if len(liste_clients_pseudos) == nbJoueurs:
-        return jsonify(liste_clients_pseudos)
+        return liste_clients_pseudos
     return str(0)
 
 
@@ -228,5 +233,5 @@ if __name__ == "__main__":
         dumpConditionsInitialesJeu = {'plateau': plateau.dump(),
                                       'listeCouleurs': listeCouleurs,
                                       'listePiocheCartesSpeciales': listePiocheCartesSpeciales}
-
-    app.run(host='0.0.0.0', port=port)
+    eventlet.wsgi.server(eventlet.listen(('', DEFAULT_PORT)), app)
+    # app.run(host='0.0.0.0', port=port)
