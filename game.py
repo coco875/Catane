@@ -1,10 +1,29 @@
-import time
+"""Module principal du jeu. Gère l'affichage et les évènements."""
+# pylint: disable=no-member
 import socketio
-from plateau import Plateau
 import pygame
-from outils import *
+from plateau import Plateau
+from outils import (
+    # class
+    Bouton,
+
+    # fonctions
+    rectangle, affiche_texte,
+
+    # dimensions
+    LARGEUR, MARGES, FPS,
+    LARGEUR_IMAGE_BOUTON_MESSAGES, LARGEUR_IMAGE_GRAND_JOUEUR, HAUTEUR_IMAGE_GRAND_JOUEUR,
+    HAUTEUR_TITRE, HAUTEUR_IMAGE_ADRESSE_IP, LARGEUR_IMAGE_ADRESSE_IP,
+    LARGEUR_IMAGE_ADRESSE_IP_PETITE,
+    X_PLATEAU, Y_PLATEAU,
+
+    # instances
+    SCREEN,
+    IMAGE_BOUTON_QUITTER, IMAGE_GRAND_JOUEUR,
+    IMAGE_FOND_EAU
+)
 from input import InputTextBox
-from const import *
+# from const import *
 
 sio = socketio.Client()
 
@@ -29,16 +48,19 @@ STATE_WAITING_PLAYERS = 'waiting_players'
 sio = socketio.Client()
 
 class Game:
+    """Classe principale du jeu. Gère l'affichage et les évènements."""
     state:str = STATE_CHOOSING_PSEUDO
     boutonQuitter = Bouton(LARGEUR - MARGES - LARGEUR_IMAGE_BOUTON_MESSAGES, MARGES,
                            'sauvegarde', image=IMAGE_BOUTON_QUITTER)
-    
+
     pseudo: str = None
     ip: str = None
     _input: InputTextBox = InputTextBox('Pseudo')
-    _input.display_icon= lambda self=_input : SCREEN.blit(IMAGE_GRAND_JOUEUR,
-                        (int((LARGEUR - LARGEUR_IMAGE_GRAND_JOUEUR) / 2), self.y - HAUTEUR_IMAGE_GRAND_JOUEUR - 15 + 9))
-    
+    _input.display_icon= lambda self_=_input : SCREEN.blit(IMAGE_GRAND_JOUEUR, (
+                            int((LARGEUR - LARGEUR_IMAGE_GRAND_JOUEUR) / 2),
+                            self_.y - HAUTEUR_IMAGE_GRAND_JOUEUR - 15 + 9
+                            ))
+
     plateau = Plateau(X_PLATEAU, Y_PLATEAU)
 
     def __init__(self):
@@ -55,7 +77,7 @@ class Game:
             self.choosing_pseudo()
         elif self.state == STATE_SELECT_IP:
             self.choosing_ip()
-        
+
         if any([event.type == pygame.QUIT or (event.type == pygame.MOUSEBUTTONUP and self.boutonQuitter.clic(x_mouse,y_mouse)) for event in self.events]):
             pygame.quit()
             exit(0)
